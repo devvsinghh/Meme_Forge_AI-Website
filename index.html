@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MemeForge AI – Viral Meme Generator</title>
+  <meta name="description" content="Create hilarious, viral-worthy memes in seconds using AI-powered captions and 100+ trending meme templates. Powered by the Imgflip API." />
+  <meta property="og:title" content="MemeForge AI – Viral Meme Generator" />
+  <meta property="og:description" content="Generate viral memes instantly with AI-powered captions and trending templates." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ===== BACKGROUND PARTICLES ===== -->
+  <div class="particles" id="particles" aria-hidden="true"></div>
+
+  <!-- ===== HEADER / NAV ===== -->
+  <header class="header" id="site-header">
+    <nav class="nav container">
+      <div class="nav-brand">
+        <span class="brand-icon">🧠</span>
+        <span class="brand-name">MemeForge <span class="brand-accent">AI</span></span>
+      </div>
+      <div class="nav-links">
+        <a href="#ai-magic" class="nav-link" id="nav-ai-magic">🪄 AI Magic</a>
+        <a href="#generator" class="nav-link" id="nav-generator">🎨 Generator</a>
+        <a href="#gif-memes" class="nav-link" id="nav-gifs">🎬 GIFs</a>
+        <a href="#gallery" class="nav-link" id="nav-gallery">🖼️ Gallery</a>
+      </div>
+      <div class="nav-badge">
+        <span class="badge-dot"></span>
+        <span>All Systems Live</span>
+      </div>
+    </nav>
+  </header>
+
+  <!-- ════════════════════════════════════════════════════════════
+       SECTION 1: HERO
+       ════════════════════════════════════════════════════════════ -->
+  <section class="hero" id="hero">
+    <div class="container hero-inner">
+      <div class="hero-pill" id="hero-pill">✨ AI-Powered Meme Engine</div>
+      <h1 class="hero-title" id="hero-title">
+        Turn Any Idea Into a<br/>
+        <span class="gradient-text">Viral Meme</span>
+      </h1>
+      <p class="hero-sub" id="hero-sub">
+        Describe a situation, pick a template, or browse GIFs — AI does the rest.
+        Powered by <strong>Gemini AI</strong>, <strong>Imgflip</strong> & <strong>Giphy</strong>.
+      </p>
+      <div class="hero-cta">
+        <a href="#ai-magic" class="btn btn-primary" id="hero-cta-ai">🪄 AI Magic</a>
+        <a href="#generator" class="btn btn-ghost" id="hero-cta-make">🔥 Manual Mode</a>
+        <a href="#gif-memes" class="btn btn-ghost" id="hero-cta-gifs">🎬 GIF Memes</a>
+      </div>
+      <div class="hero-stats" id="hero-stats">
+        <div class="stat"><span class="stat-num" id="stat-templates">—</span><span class="stat-label">Templates</span></div>
+        <div class="stat-divider"></div>
+        <div class="stat"><span class="stat-num">∞</span><span class="stat-label">Combinations</span></div>
+        <div class="stat-divider"></div>
+        <div class="stat"><span class="stat-num">Free</span><span class="stat-label">Always</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════
+       HOW IT WORKS — 3 Steps
+       ════════════════════════════════════════════════════════════ -->
+  <section class="section section-steps" id="how-it-works">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">How It Works</h2>
+        <p class="section-sub">Three ways to create viral memes in seconds</p>
+      </div>
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-number">1</div>
+          <div class="step-icon">🪄</div>
+          <h3>AI Magic</h3>
+          <p>Describe any situation — AI picks the perfect template, writes the captions & finds related GIFs</p>
+          <a href="#ai-magic" class="step-link">Try AI Magic →</a>
+        </div>
+        <div class="step-card">
+          <div class="step-number">2</div>
+          <div class="step-icon">🎨</div>
+          <h3>Manual Generator</h3>
+          <p>Choose from 100+ Imgflip templates, write your own captions & customize font/color</p>
+          <a href="#generator" class="step-link">Open Generator →</a>
+        </div>
+        <div class="step-card">
+          <div class="step-number">3</div>
+          <div class="step-icon">🎬</div>
+          <h3>GIF Memes</h3>
+          <p>Search & discover animated GIF memes from Giphy — copy, share or save to your gallery</p>
+          <a href="#gif-memes" class="step-link">Browse GIFs →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════
+       SECTION 2: AI MAGIC
+       ════════════════════════════════════════════════════════════ -->
+  <section class="section section-ai" id="ai-magic">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-step-badge">Step 1</div>
+        <div class="ai-magic-badge">🪄 Powered by Gemini AI</div>
+        <h2 class="section-title">Describe It. We <span class="gradient-text">Meme</span> It.</h2>
+        <p class="section-sub">Type any situation, thought, or feeling — our AI analyzes it and generates the perfect meme instantly.</p>
+      </div>
+
+      <div class="ai-magic-container">
+        <!-- Input Area -->
+        <div class="ai-input-wrap">
+          <div class="ai-input-glow"></div>
+          <textarea id="ai-text-input" class="ai-textarea" rows="3"
+            placeholder='Try: "When the assignment deadline is tomorrow and I haven&#39;t started yet"'
+            maxlength="300"></textarea>
+          <div class="ai-input-footer">
+            <span class="ai-char-count" id="ai-char-count">0 / 300</span>
+            <button class="btn btn-primary btn-ai-generate" id="btn-ai-generate">
+              <span id="ai-gen-label">✨ Generate Meme</span>
+              <div class="spinner" id="ai-gen-spinner" style="display:none"></div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Quick Examples -->
+        <div class="ai-examples" id="ai-examples">
+          <span class="ai-examples-label">Try these:</span>
+          <button class="ai-example-chip" data-text="When your code works on the first try">💻 Code works first try</button>
+          <button class="ai-example-chip" data-text="Monday morning after a weekend of doing nothing">😴 Monday morning</button>
+          <button class="ai-example-chip" data-text="When your friend says they'll be there in 5 minutes">⏰ Friend says 5 mins</button>
+          <button class="ai-example-chip" data-text="Studying all night and the exam gets postponed">📚 Exam postponed</button>
+          <button class="ai-example-chip" data-text="When the WiFi drops during an online meeting">📡 WiFi drops</button>
+        </div>
+
+        <!-- Analysis Results (hidden by default) -->
+        <div class="ai-results" id="ai-results" style="display:none">
+          <div class="ai-results-header">
+            <h3>🧠 AI Analysis</h3>
+            <button class="btn btn-ghost btn-sm" id="btn-ai-retry">🔄 Try Again</button>
+          </div>
+
+          <div class="ai-analysis-grid">
+            <div class="ai-analysis-card" id="ai-card-emotion">
+              <div class="ai-card-icon">💭</div>
+              <div class="ai-card-label">Emotion</div>
+              <div class="ai-card-value" id="ai-emotion">—</div>
+            </div>
+            <div class="ai-analysis-card" id="ai-card-category">
+              <div class="ai-card-icon">📂</div>
+              <div class="ai-card-label">Category</div>
+              <div class="ai-card-value" id="ai-category">—</div>
+            </div>
+            <div class="ai-analysis-card" id="ai-card-template">
+              <div class="ai-card-icon">🖼️</div>
+              <div class="ai-card-label">Template</div>
+              <div class="ai-card-value" id="ai-template-suggestion">—</div>
+            </div>
+          </div>
+
+          <div class="ai-caption-preview">
+            <div class="ai-caption-block">
+              <span class="ai-caption-label">🔝 Top Text</span>
+              <div class="ai-caption-text" id="ai-top-text">—</div>
+            </div>
+            <div class="ai-caption-block">
+              <span class="ai-caption-label">⬇️ Bottom Text</span>
+              <div class="ai-caption-text" id="ai-bottom-text">—</div>
+            </div>
+          </div>
+
+          <div class="ai-results-actions">
+            <button class="btn btn-primary btn-lg" id="btn-ai-use-meme">
+              🚀 Use This & Forge Meme
+            </button>
+            <button class="btn btn-ghost" id="btn-ai-edit">
+              ✏️ Edit Captions First
+            </button>
+          </div>
+
+          <!-- AI-linked GIF suggestions -->
+          <div class="ai-gif-section" id="ai-gif-section" style="display:none">
+            <div class="ai-gif-header">
+              <h4>🎬 Related GIF Memes</h4>
+              <span class="ai-gif-query" id="ai-gif-query"></span>
+            </div>
+            <div class="ai-gif-grid" id="ai-gif-grid"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════
+       SECTION 3: MEME GENERATOR (Manual Mode)
+       ════════════════════════════════════════════════════════════ -->
+  <section class="section section-dark" id="generator">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-step-badge">Step 2</div>
+        <h2 class="section-title">🎨 Meme Generator</h2>
+        <p class="section-sub">Choose a template, write your captions, and forge your meme</p>
+      </div>
+
+      <div class="generator-layout">
+
+        <!-- LEFT: Template Picker -->
+        <div class="panel panel-templates" id="panel-templates">
+          <div class="panel-header">
+            <h3>1. Pick a Template</h3>
+            <span class="template-count" id="template-count">Loading…</span>
+          </div>
+          <div class="search-bar">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="search-input" placeholder="Search templates…" autocomplete="off" />
+          </div>
+          <div class="template-grid" id="template-grid">
+            <div class="skeleton-grid">
+              <div class="skeleton"></div><div class="skeleton"></div>
+              <div class="skeleton"></div><div class="skeleton"></div>
+              <div class="skeleton"></div><div class="skeleton"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Caption & Preview -->
+        <div class="panel panel-creator" id="panel-creator">
+
+          <!-- Selected Template Preview -->
+          <div class="selected-preview" id="selected-preview">
+            <div class="preview-empty" id="preview-empty">
+              <div class="preview-empty-icon">👈</div>
+              <p>Select a template to get started</p>
+            </div>
+            <img id="preview-img" src="" alt="Selected meme template" style="display:none" />
+            <div class="template-name-badge" id="template-name-badge" style="display:none"></div>
+          </div>
+
+          <!-- Caption Inputs -->
+          <div class="caption-section" id="caption-section">
+            <div class="panel-header">
+              <h3>2. Add Your Captions</h3>
+              <button class="btn-ai" id="btn-ai-suggest" disabled>
+                <span class="ai-icon">🤖</span> AI Suggest
+              </button>
+            </div>
+            <div id="caption-inputs">
+              <div class="caption-row">
+                <label for="caption-top">Top Text</label>
+                <input type="text" id="caption-top" placeholder="Enter top text…" />
+              </div>
+              <div class="caption-row">
+                <label for="caption-bottom">Bottom Text</label>
+                <input type="text" id="caption-bottom" placeholder="Enter bottom text…" />
+              </div>
+            </div>
+
+            <!-- Style Options -->
+            <div class="style-options" id="style-options">
+              <div class="style-row">
+                <label for="font-select">Font Style</label>
+                <select id="font-select">
+                  <option value="Impact">Impact (Classic)</option>
+                  <option value="Arial">Arial (Clean)</option>
+                  <option value="Comic Sans MS">Comic Sans (Chaos)</option>
+                </select>
+              </div>
+              <div class="style-row">
+                <label for="color-select">Text Color</label>
+                <select id="color-select">
+                  <option value="#ffffff">White ⬜</option>
+                  <option value="#ffff00">Yellow 🟡</option>
+                  <option value="#ff0000">Red 🔴</option>
+                  <option value="#00ff00">Green 🟢</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Credentials -->
+            <div class="creds-section" id="creds-section">
+              <div class="creds-header">
+                <span>🔑 Imgflip Account</span>
+                <a href="https://imgflip.com/signup" target="_blank" rel="noopener" class="creds-link">Create free account →</a>
+              </div>
+              <div class="creds-row">
+                <input type="text" id="imgflip-username" placeholder="Imgflip username" />
+                <input type="password" id="imgflip-password" placeholder="Imgflip password" />
+              </div>
+              <p class="creds-note">ℹ️ Demo credentials work for testing. Create your own for production use.</p>
+            </div>
+
+            <div class="action-row">
+              <button class="btn btn-primary btn-forge" id="btn-forge" disabled>
+                <span id="forge-label">⚡ Forge My Meme</span>
+                <div class="spinner" id="forge-spinner" style="display:none"></div>
+              </button>
+              <button class="btn btn-ghost" id="btn-reset">🔄 Reset</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RESULT AREA -->
+      <div class="result-area" id="result-area" style="display:none">
+        <div class="result-header">
+          <h3>🎉 Your Meme is Ready!</h3>
+          <p>Share it with the world</p>
+        </div>
+        <div class="result-content">
+          <div class="result-img-wrap">
+            <img id="result-img" src="" alt="Generated meme" />
+            <div class="result-badge">VIRAL READY</div>
+          </div>
+          <div class="result-actions">
+            <a id="btn-download" class="btn btn-primary" download="meme.jpg">⬇️ Download</a>
+            <a id="btn-open" class="btn btn-ghost" target="_blank" rel="noopener">🔗 Open Full Size</a>
+            <button class="btn btn-accent" id="btn-save-gallery">💾 Save to Gallery</button>
+            <button class="btn btn-ghost" id="btn-make-another">🔁 Make Another</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════
+       SECTION 4: TRENDING TEMPLATES
+       ════════════════════════════════════════════════════════════ -->
+  <section class="section" id="trending">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">🔥 Trending Templates</h2>
+        <p class="section-sub">The hottest meme templates right now — click any to start creating</p>
+      </div>
+      <div class="trending-grid" id="trending-grid">
+        <!-- filled by JS -->
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════
+       SECTION 5: GIF MEMES
+       ════════════════════════════════════════════════════════════ -->
+  <section class="section section-dark" id="gif-memes">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-step-badge">Step 3</div>
+        <h2 class="section-title">🎬 GIF Memes</h2>
+        <p class="section-sub">Search and discover animated GIF memes powered by Giphy</p>
+      </div>
+
+      <div class="gif-search-container">
+        <div class="gif-search-bar">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="gif-search-input" placeholder="Search GIF memes… (e.g. coding, monday, exam)" autocomplete="off" />
+          <button class="btn btn-primary btn-sm" id="btn-gif-search">Search</button>
+        </div>
+        <div class="gif-category-chips" id="gif-category-chips">
+          <button class="gif-chip active" data-q="trending memes">🔥 Trending</button>
+          <button class="gif-chip" data-q="funny meme reaction">😂 Funny</button>
+          <button class="gif-chip" data-q="coding programming meme">💻 Coding</button>
+          <button class="gif-chip" data-q="student exam meme">📚 Student</button>
+          <button class="gif-chip" data-q="monday morning mood">😴 Monday</button>
+          <button class="gif-chip" data-q="sarcastic meme reaction">😏 Sarcastic</button>
+          <button class="gif-chip" data-q="sad crying meme">😢 Sad</button>
+          <button class="gif-chip" data-q="celebration win meme">🎉 Celebrate</button>
+        </div>
+      </div>
+
+      <div id="gif-api-notice" class="gif-api-notice" style="display:none">
+        <p>🔑 <strong>Giphy API key needed!</strong> Get a free key from
+          <a href="https://developers.giphy.com/dashboard/?create=true" target="_blank" rel="noopener">developers.giphy.com</a>
+          and paste it in <code>config.js</code></p>
+      </div>
+
+      <div class="gif-grid" id="gif-grid">
+        <div class="gif-grid-empty" id="gif-grid-empty">
+          <div style="font-size:48px;margin-bottom:12px">🎬</div>
+          <p>Search for GIF memes or pick a category above</p>
+        </div>
+      </div>
+
+      <div class="gif-load-more" id="gif-load-more" style="display:none">
+        <button class="btn btn-ghost" id="btn-gif-load-more">Load More GIFs</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════
+       SECTION 6: MY GALLERY
+       ════════════════════════════════════════════════════════════ -->
+  <section class="section" id="gallery">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">🖼️ My Meme Gallery</h2>
+        <p class="section-sub">Your saved memes & GIFs — stored locally in your browser</p>
+        <div class="gallery-header-actions">
+          <span class="gallery-count-badge" id="gallery-count-badge">0 saved</span>
+          <button class="btn btn-ghost btn-sm" id="btn-clear-gallery">🗑️ Clear Gallery</button>
+        </div>
+      </div>
+      <div class="gallery-grid" id="gallery-grid">
+        <!-- Gallery items rendered by JS -->
+      </div>
+      <div class="gallery-empty" id="gallery-empty" style="display:none">
+        <div class="gallery-empty-icon">😔</div>
+        <p>No saved memes yet. Create one and save it!</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== AI SUGGESTIONS MODAL ===== -->
+  <div class="modal-overlay" id="ai-modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="ai-modal-title">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="ai-modal-title">🤖 AI Caption Suggestions</h3>
+        <button class="modal-close" id="ai-modal-close" aria-label="Close">✕</button>
+      </div>
+      <p class="modal-sub">Pick a vibe and AI will suggest the perfect captions</p>
+      <div class="vibe-grid" id="vibe-grid">
+        <button class="vibe-btn" data-vibe="relatable">😅 Relatable</button>
+        <button class="vibe-btn" data-vibe="savage">😤 Savage</button>
+        <button class="vibe-btn" data-vibe="wholesome">🥰 Wholesome</button>
+        <button class="vibe-btn" data-vibe="programmer">💻 Programmer</button>
+        <button class="vibe-btn" data-vibe="student">📚 Student Life</button>
+        <button class="vibe-btn" data-vibe="monday">😴 Monday Mood</button>
+      </div>
+      <div class="suggestions-list" id="suggestions-list"></div>
+    </div>
+  </div>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <span class="brand-icon">🧠</span>
+        <span class="brand-name">MemeForge <span class="brand-accent">AI</span></span>
+      </div>
+      <p class="footer-copy">Built with ❤️ for AI Essential Subject · Powered by
+        <a href="https://imgflip.com/api" target="_blank">Imgflip</a>,
+        <a href="https://ai.google.dev/" target="_blank">Gemini AI</a> &
+        <a href="https://giphy.com" target="_blank">Giphy</a>
+      </p>
+      <div class="footer-tech">
+        <span class="tech-tag">HTML5</span>
+        <span class="tech-tag">CSS3</span>
+        <span class="tech-tag">JavaScript</span>
+        <span class="tech-tag">Imgflip API</span>
+        <span class="tech-tag">Gemini AI</span>
+        <span class="tech-tag">Giphy API</span>
+        <span class="tech-tag">NLU Engine</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
