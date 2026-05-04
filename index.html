@@ -414,22 +414,34 @@
     </div>
   </section>
 
-  <!-- ===== AI SUGGESTIONS MODAL ===== -->
+  <!-- ===== AI VISION SUGGESTIONS MODAL ===== -->
   <div class="modal-overlay" id="ai-modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="ai-modal-title">
-    <div class="modal">
+    <div class="modal modal-vision">
       <div class="modal-header">
-        <h3 id="ai-modal-title">🤖 AI Caption Suggestions</h3>
+        <h3 id="ai-modal-title">🤖 AI Vision — Smart Captions</h3>
         <button class="modal-close" id="ai-modal-close" aria-label="Close">✕</button>
       </div>
-      <p class="modal-sub">Pick a vibe and AI will suggest the perfect captions</p>
-      <div class="vibe-grid" id="vibe-grid">
-        <button class="vibe-btn" data-vibe="relatable">😅 Relatable</button>
-        <button class="vibe-btn" data-vibe="savage">😤 Savage</button>
-        <button class="vibe-btn" data-vibe="wholesome">🥰 Wholesome</button>
-        <button class="vibe-btn" data-vibe="programmer">💻 Programmer</button>
-        <button class="vibe-btn" data-vibe="student">📚 Student Life</button>
-        <button class="vibe-btn" data-vibe="monday">😴 Monday Mood</button>
+      <p class="modal-sub">Gemini AI scans your selected template image and suggests the most relevant captions</p>
+
+      <!-- Template preview inside modal -->
+      <div class="vision-preview" id="vision-preview">
+        <img id="vision-preview-img" src="" alt="Selected template" />
+        <div class="vision-template-name" id="vision-template-name"></div>
       </div>
+
+      <!-- Scan button -->
+      <button class="btn btn-primary btn-vision-scan" id="btn-vision-scan">
+        <span id="vision-scan-label">🔬 Scan Image with AI</span>
+        <div class="spinner" id="vision-scan-spinner" style="display:none"></div>
+      </button>
+
+      <!-- AI description of what it sees -->
+      <div class="vision-description" id="vision-description" style="display:none">
+        <div class="vision-desc-header">👁️ AI sees:</div>
+        <p id="vision-desc-text"></p>
+      </div>
+
+      <!-- Suggestions list -->
       <div class="suggestions-list" id="suggestions-list"></div>
     </div>
   </div>

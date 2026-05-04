@@ -19,45 +19,6 @@ const state = {
   gallery:       JSON.parse(localStorage.getItem('memeforge_gallery') || '[]'),
 };
 
-// ─── AI CAPTION LIBRARY (client-side AI simulation) ──────────
-const AI_CAPTIONS = {
-  relatable: [
-    { top: "Me trying to sleep at 2am", bottom: "My brain: remember that embarrassing thing from 2009?" },
-    { top: "When you finally fix the bug", bottom: "Introduces 3 more bugs" },
-    { top: "Alarm set for 6am", bottom: "Wakes up at 6, 6:09, 6:18, 6:27..." },
-    { top: "Me on Monday morning", bottom: "vs Me on Friday 5pm" },
-  ],
-  savage: [
-    { top: "You're not the problem", bottom: "You ARE the problem" },
-    { top: "I'd roast you", bottom: "But my mama said I shouldn't burn trash" },
-    { top: "My patience", bottom: "Left the chat" },
-    { top: "Their opinion", bottom: "Irrelevant. Next." },
-  ],
-  wholesome: [
-    { top: "You made it this far", bottom: "That took strength. Be proud." },
-    { top: "Someone out there", bottom: "Is smiling because you exist" },
-    { top: "Today might be hard", bottom: "But you've survived every bad day so far" },
-    { top: "You don't need to be perfect", bottom: "Just keep going 💜" },
-  ],
-  programmer: [
-    { top: "It works on my machine", bottom: "Ship the machine" },
-    { top: "Senior dev: just google it", bottom: "Me googling: how to google" },
-    { top: "99 little bugs in the code", bottom: "Fix one, 127 bugs in the code" },
-    { top: "Stack Overflow is down", bottom: "All software development halts globally" },
-  ],
-  student: [
-    { top: "Assignment due in 3 hours", bottom: "Me opening Netflix" },
-    { top: "Prof: this won't be in the exam", bottom: "It's 30% of the exam" },
-    { top: "Me at 9pm", bottom: "Me at 3am finishing the assignment" },
-    { top: "Group project", bottom: "One person does everything" },
-  ],
-  monday: [
-    { top: "Monday morning", bottom: "My entire existence questions itself" },
-    { top: "The sun: rise and shine!", bottom: "Me: unsubscribe" },
-    { top: "Boss: can you work Saturday?", bottom: "My soul: leaves the body" },
-    { top: "Coffee #1", bottom: "Still not functional" },
-  ],
-};
 
 // ─── DOM REFS ─────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
@@ -91,10 +52,12 @@ const statTemplates    = $('stat-templates');
 const templateCount    = $('template-count');
 const aiModal          = $('ai-modal');
 const aiModalClose     = $('ai-modal-close');
-const vibeGrid         = $('vibe-grid');
 const suggestionsList  = $('suggestions-list');
 
 // ─── INIT — defined at bottom of file (after GIF setup) ──────
+
+// ─── BLOCKED TEMPLATES (hidden from all views) ───────────────
+const BLOCKED_TEMPLATES = ['Distracted Boyfriend'];
 
 // ─── FETCH MEMES FROM IMGFLIP API ────────────────────────────
 async function fetchMemes() {
@@ -104,7 +67,10 @@ async function fetchMemes() {
 
     if (!data.success) throw new Error('API returned failure');
 
-    state.allMemes      = data.data.memes;
+    // Filter out blocked templates
+    state.allMemes      = data.data.memes.filter(m =>
+      !BLOCKED_TEMPLATES.some(b => m.name.toLowerCase() === b.toLowerCase())
+    );
     state.filteredMemes = [...state.allMemes];
 
     // Update stat counter
@@ -346,31 +312,215 @@ function selectAndScroll(id) {
   document.getElementById('generator').scrollIntoView({ behavior: 'smooth' });
 }
 
-// ─── AI SUGGESTIONS ───────────────────────────────────────────
+// ─── AI VISION SUGGESTIONS ───────────────────────────────────
 function openAiModal() {
+  if (!state.selectedMeme) return;
+
   aiModal.style.display = 'flex';
   suggestionsList.innerHTML = '';
-  document.querySelectorAll('.vibe-btn').forEach(b => b.classList.remove('active'));
+
+  // Show preview of selected template in modal
+  const visionImg = document.getElementById('vision-preview-img');
+  const visionName = document.getElementById('vision-template-name');
+  const visionDesc = document.getElementById('vision-description');
+  const scanLabel = document.getElementById('vision-scan-label');
+  const scanSpinner = document.getElementById('vision-scan-spinner');
+  const btnScan = document.getElementById('btn-vision-scan');
+
+  visionImg.src = state.selectedMeme.url;
+  visionName.textContent = state.selectedMeme.name;
+  visionDesc.style.display = 'none';
+  btnScan.disabled = false;
+  scanLabel.style.display = 'inline';
+  scanSpinner.style.display = 'none';
 }
 
 function closeAiModal() {
   aiModal.style.display = 'none';
 }
 
-function showVibeSuggestions(vibe) {
-  const suggestions = AI_CAPTIONS[vibe] || [];
+async function scanTemplateWithVision() {
+  if (!state.selectedMeme) return;
 
-  document.querySelectorAll('.vibe-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.vibe === vibe);
+  const scanLabel = document.getElementById('vision-scan-label');
+  const scanSpinner = document.getElementById('vision-scan-spinner');
+  const btnScan = document.getElementById('btn-vision-scan');
+  const visionDesc = document.getElementById('vision-description');
+  const visionDescText = document.getElementById('vision-desc-text');
+
+  // Loading state
+  scanLabel.style.display = 'none';
+  scanSpinner.style.display = 'block';
+  btnScan.disabled = true;
+  suggestionsList.innerHTML = '';
+  visionDesc.style.display = 'none';
+
+  try {
+    const apiKey = (typeof GEMINI_CONFIG !== 'undefined') ? GEMINI_CONFIG.apiKey : '';
+    if (!apiKey) {
+      // Fallback to client-side if no API key
+      const fallback = generateFallbackVisionSuggestions(state.selectedMeme.name);
+      displayVisionResults(fallback);
+      return;
+    }
+
+    // Fetch the image and convert to base64
+    const imgResponse = await fetch(state.selectedMeme.url);
+    const imgBlob = await imgResponse.blob();
+    const base64 = await blobToBase64(imgBlob);
+    const mimeType = imgBlob.type || 'image/jpeg';
+
+    const prompt = `You are analyzing a meme template image. Look at this image carefully and:
+
+1. Describe what you see in the image in 1-2 sentences (characters, expressions, scene, context)
+2. Generate exactly 4 different caption pairs (top_text and bottom_text) that would be funny, relevant, and perfect for this specific meme template image
+
+The captions should be:
+- Directly relevant to what the image shows (the characters, their expressions, the situation)
+- Humorous and relatable
+- Short (max 10 words per line)
+- Varied in style (mix of relatable, sarcastic, wholesome, and savage)
+
+Return ONLY valid JSON (no markdown, no code fences):
+{
+  "image_description": "<what you see in the image>",
+  "suggestions": [
+    { "top": "<top text>", "bottom": "<bottom text>", "vibe": "<one word vibe like funny/savage/relatable/wholesome>" },
+    { "top": "<top text>", "bottom": "<bottom text>", "vibe": "<vibe>" },
+    { "top": "<top text>", "bottom": "<bottom text>", "vibe": "<vibe>" },
+    { "top": "<top text>", "bottom": "<bottom text>", "vibe": "<vibe>" }
+  ]
+}`;
+
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              {
+                inline_data: {
+                  mime_type: mimeType,
+                  data: base64,
+                }
+              },
+              { text: prompt }
+            ]
+          }]
+        }),
+      }
+    );
+
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+
+    let raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    raw = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+    const result = JSON.parse(raw);
+    displayVisionResults(result);
+    showToast('🔬 AI Vision scan complete!', 'success');
+
+  } catch (err) {
+    console.error('Vision scan error:', err);
+    // Fallback to template-name-based suggestions
+    const fallback = generateFallbackVisionSuggestions(state.selectedMeme.name);
+    displayVisionResults(fallback);
+    showToast('⚠️ Using smart fallback captions', 'warn');
+  } finally {
+    scanLabel.style.display = 'inline';
+    scanSpinner.style.display = 'none';
+    btnScan.disabled = false;
+  }
+}
+
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result.split(',')[1];
+      resolve(base64String);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
   });
+}
 
-  suggestionsList.innerHTML = suggestions.map((s, i) => `
+function displayVisionResults(result) {
+  const visionDesc = document.getElementById('vision-description');
+  const visionDescText = document.getElementById('vision-desc-text');
+
+  // Show image description
+  if (result.image_description) {
+    visionDescText.textContent = result.image_description;
+    visionDesc.style.display = 'block';
+  }
+
+  // Show suggestions
+  const vibeEmoji = { funny: '😂', savage: '😤', relatable: '😅', wholesome: '🥰', sarcastic: '😏', dark: '🖤', motivational: '💪', random: '🎲' };
+
+  suggestionsList.innerHTML = (result.suggestions || []).map((s, i) => `
     <div class="suggestion-item" onclick="applySuggestion('${escapeAttr(s.top)}','${escapeAttr(s.bottom)}')"
          role="button" tabindex="0">
-      <div class="suggestion-label">Option ${i + 1}</div>
+      <div class="suggestion-label">
+        <span>${vibeEmoji[s.vibe?.toLowerCase()] || '✨'} Option ${i + 1}</span>
+        <span class="suggestion-vibe-tag">${s.vibe || 'creative'}</span>
+      </div>
       <div class="suggestion-top">🔝 ${s.top}</div>
       <div class="suggestion-bottom">⬇️ ${s.bottom}</div>
     </div>`).join('');
+}
+
+function generateFallbackVisionSuggestions(templateName) {
+  const name = templateName.toLowerCase();
+  let suggestions = [];
+
+  if (name.includes('skeptical') || name.includes('third world')) {
+    suggestions = [
+      { top: "So you're telling me", bottom: "Your code worked on the first try?", vibe: "sarcastic" },
+      { top: "You mean to tell me", bottom: "The meeting could've been an email?", vibe: "relatable" },
+      { top: "Wait, you're saying", bottom: "You actually read the terms and conditions?", vibe: "funny" },
+      { top: "So let me get this straight", bottom: "You went to bed before midnight?", vibe: "savage" },
+    ];
+  } else if (name.includes('yoda') || name.includes('star wars')) {
+    suggestions = [
+      { top: "Do or do not", bottom: "There is no try... just Stack Overflow", vibe: "funny" },
+      { top: "Strong with bugs", bottom: "Your code is", vibe: "savage" },
+      { top: "Sleep you must", bottom: "But one more episode you will watch", vibe: "relatable" },
+      { top: "Judge me by my commits", bottom: "Do you? Hmm?", vibe: "sarcastic" },
+    ];
+  } else if (name.includes('look at me') || name.includes('pirate')) {
+    suggestions = [
+      { top: "Look at me", bottom: "I am the team lead now", vibe: "savage" },
+      { top: "Look at me", bottom: "I'm the bug creator now", vibe: "funny" },
+      { top: "Look at me", bottom: "I am the procrastinator now", vibe: "relatable" },
+      { top: "Look at me", bottom: "I decide when we eat", vibe: "wholesome" },
+    ];
+  } else if (name.includes('gustin') || name.includes('grave')) {
+    suggestions = [
+      { top: "My motivation", bottom: "Me standing over it on Monday", vibe: "relatable" },
+      { top: "My sleep schedule", bottom: "Me at 3 AM on my phone", vibe: "savage" },
+      { top: "My diet plans", bottom: "Me with a pizza", vibe: "funny" },
+      { top: "My free time", bottom: "Me after getting a job", vibe: "relatable" },
+    ];
+  } else if (name.includes('drake')) {
+    suggestions = [
+      { top: "Working hard", bottom: "Working smart", vibe: "relatable" },
+      { top: "Reading the docs", bottom: "Asking ChatGPT", vibe: "funny" },
+      { top: "Going to the gym", bottom: "Saying I'll start Monday", vibe: "relatable" },
+      { top: "8 hours of sleep", bottom: "One more episode", vibe: "savage" },
+    ];
+  } else {
+    suggestions = [
+      { top: "Nobody:", bottom: "Absolutely nobody:", vibe: "funny" },
+      { top: "Me pretending to work", bottom: "While scrolling memes", vibe: "relatable" },
+      { top: "My brain at 3 AM", bottom: "Let's think about everything", vibe: "relatable" },
+      { top: "This is fine", bottom: "Everything is fine", vibe: "sarcastic" },
+    ];
+  }
+
+  return { image_description: `Meme template: ${templateName}`, suggestions };
 }
 
 function applySuggestion(top, bottom) {
@@ -479,8 +629,8 @@ const AI_NLU = {
     'food':            { keywords: ['food','eat','hungry','pizza','snack','diet','cook','restaurant','order','delivery','lunch','dinner','breakfast'] },
   },
   templates: {
-    'stress + student life':     ['Distracted Boyfriend','Panik Kalm Panik','Running Away Balloon','Hide the Pain Harold'],
-    'funny + coding':            ['Two Buttons','Expanding Brain','Drake Hotline Bling','Change My Mind'],
+    'stress + student life':     ['Third World Skeptical Kid','Panik Kalm Panik','Running Away Balloon','Hide the Pain Harold'],
+    'funny + coding':            ['Two Buttons','Star Wars Yoda','Drake Hotline Bling','Change My Mind'],
     'relatable + daily struggle':['First Time?','Bike Fall','Clown Applying Makeup','Is This A Pigeon'],
     'sarcasm + work life':       ['Mocking Spongebob','Surprised Pikachu','Roll Safe Think About It','Wait Its All'],
     'tired + daily struggle':    ['Waiting Skeleton','Tired Spongebob','Ancient Aliens','Sleeping Shaq'],
@@ -490,11 +640,11 @@ const AI_NLU = {
     'happy + daily struggle':    ['Success Kid','Leonardo Dicaprio Cheers','Epic Handshake','Shut Up And Take My Money'],
     'confused + coding':         ['Confused Math Lady','Is This A Pigeon','Futurama Fry','Jackie Chan WTF'],
     'funny + food':              ['Boardroom Meeting Suggestion','Drake Hotline Bling','One Does Not Simply','Shut Up And Take My Money'],
-    'relatable + student life':  ['Distracted Boyfriend','Clown Applying Makeup','Panik Kalm Panik','Running Away Balloon'],
-    'funny + relationships':     ['Distracted Boyfriend','Woman Yelling At Cat','Left Exit 12 Off Ramp','Drake Hotline Bling'],
+    'relatable + student life':  ['Look At Me','Clown Applying Makeup','Panik Kalm Panik','Running Away Balloon'],
+    'funny + relationships':     ['Grant Gustin over grave','Woman Yelling At Cat','Left Exit 12 Off Ramp','Drake Hotline Bling'],
     'sarcasm + internet culture':['Mocking Spongebob','Change My Mind','Roll Safe Think About It','Futurama Fry'],
     'stressed + coding':         ['Fine This is Fine','Panik Kalm Panik','Hide the Pain Harold','Two Buttons'],
-    '_default':                  ['Drake Hotline Bling','Distracted Boyfriend','Expanding Brain','Change My Mind'],
+    '_default':                  ['Drake Hotline Bling','Third World Skeptical Kid','Star Wars Yoda','Change My Mind'],
   },
   captionPatterns: {
     'stress':    [(t)=>[`Me: ${t.slice(0,30)}`, 'My brain: this is fine 🔥'], (t)=>[`${t.slice(0,35)}`, 'Why do I do this to myself']],
@@ -561,7 +711,7 @@ Return JSON with these exact keys:
 {
   "emotion": "<detected emotion with emoji prefix, e.g. 😂 funny>",
   "category": "<meme category, e.g. student life, coding, daily struggle>",
-  "template_suggestion": "<name of a popular meme template from imgflip like: Drake Hotline Bling, Distracted Boyfriend, Expanding Brain, Change My Mind, Two Buttons, Panik Kalm Panik, etc.>",
+  "template_suggestion": "<name of a popular meme template from imgflip like: Drake Hotline Bling, Third World Skeptical Kid, Star Wars Yoda, Look At Me, Grant Gustin over grave, Change My Mind, Two Buttons, Panik Kalm Panik, etc.>",
   "top_text": "<short meme top text, max 10 words>",
   "bottom_text": "<short meme bottom text, max 12 words>"
 }
@@ -914,10 +1064,8 @@ function bindEvents() {
   aiModalClose.addEventListener('click', closeAiModal);
   aiModal.addEventListener('click', e => { if (e.target === aiModal) closeAiModal(); });
 
-  // Vibe buttons
-  vibeGrid.querySelectorAll('.vibe-btn').forEach(btn => {
-    btn.addEventListener('click', () => showVibeSuggestions(btn.dataset.vibe));
-  });
+  // Vision scan button
+  document.getElementById('btn-vision-scan').addEventListener('click', scanTemplateWithVision);
 
   // Gallery
   btnSaveGallery.addEventListener('click', saveToGallery);
