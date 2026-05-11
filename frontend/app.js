@@ -1,15 +1,12 @@
 /* ============================================================
-   MEMEFORGE AI – app.js
-   Imgflip API Integration + AI Caption Suggestions
+   MEMEFORGE AI – app.js (Frontend)
+   Talks to Python Flask backend for all API calls
    ============================================================ */
 
 'use strict';
 
-// ─── API CONFIG ───────────────────────────────────────────────
-const IMGFLIP_API = {
-  getMemes:    'https://api.imgflip.com/get_memes',
-  captionImg:  'https://api.imgflip.com/caption_image',
-};
+// ─── BACKEND API BASE URL ─────────────────────────────────────
+const API_BASE = window.location.origin + '/api';
 
 // ─── STATE ────────────────────────────────────────────────────
 const state = {
@@ -31,8 +28,6 @@ const captionTop       = $('caption-top');
 const captionBottom    = $('caption-bottom');
 const fontSelect       = $('font-select');
 const colorSelect      = $('color-select');
-const imgflipUser      = $('imgflip-username');
-const imgflipPass      = $('imgflip-password');
 const btnForge         = $('btn-forge');
 const forgeLabel       = $('forge-label');
 const forgeSpinner     = $('forge-spinner');
@@ -62,7 +57,7 @@ const BLOCKED_TEMPLATES = ['Distracted Boyfriend'];
 // ─── FETCH MEMES FROM IMGFLIP API ────────────────────────────
 async function fetchMemes() {
   try {
-    const res  = await fetch(IMGFLIP_API.getMemes);
+    const res  = await fetch(API_BASE + '/memes');
     const data = await res.json();
 
     if (!data.success) throw new Error('API returned failure');
@@ -171,14 +166,8 @@ async function forgeMeme() {
   if (!state.selectedMeme) return;
 
   const captions  = getCaptions();
-  const username  = imgflipUser.value.trim();
-  const password  = imgflipPass.value.trim();
   const color     = colorSelect.value;
   const font      = fontSelect.value;
-
-  if (!username || !password) {
-    showToast('⚠️ Please enter your Imgflip credentials', 'warn'); return;
-  }
 
   // Loading state
   forgeLabel.style.display = 'none';
@@ -186,20 +175,21 @@ async function forgeMeme() {
   btnForge.disabled = true;
 
   try {
-    const body = new URLSearchParams({
-      template_id: state.selectedMeme.id,
-      username,
-      password,
-      font,
-    });
+    const boxes = captions.map(text => ({
+      text,
+      color,
+      outline_color: '#000000',
+    }));
 
-    captions.forEach((text, i) => {
-      body.append(`boxes[${i}][text]`,          text);
-      body.append(`boxes[${i}][color]`,         color);
-      body.append(`boxes[${i}][outline_color]`, '#000000');
+    const res = await fetch(API_BASE + '/caption', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        template_id: state.selectedMeme.id,
+        boxes,
+        font,
+      }),
     });
-
-    const res  = await fetch(IMGFLIP_API.captionImg, { method: 'POST', body });
     const data = await res.json();
 
     if (!data.success) throw new Error(data.error_message || 'Unknown API error');
@@ -356,75 +346,31 @@ async function scanTemplateWithVision() {
   visionDesc.style.display = 'none';
 
   try {
-    const apiKey = (typeof GEMINI_CONFIG !== 'undefined') ? GEMINI_CONFIG.apiKey : '';
-    if (!apiKey) {
-      // Fallback to client-side if no API key
+    // Call backend vision endpoint — server handles image fetch + Gemini API
+    const res = await fetch(API_BASE + '/ai/vision', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image_url: state.selectedMeme.url,
+        template_name: state.selectedMeme.name,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!data.success) {
+      // Fallback to client-side suggestions
       const fallback = generateFallbackVisionSuggestions(state.selectedMeme.name);
       displayVisionResults(fallback);
+      showToast('⚠️ Using smart fallback captions', 'warn');
       return;
     }
 
-    // Fetch the image and convert to base64
-    const imgResponse = await fetch(state.selectedMeme.url);
-    const imgBlob = await imgResponse.blob();
-    const base64 = await blobToBase64(imgBlob);
-    const mimeType = imgBlob.type || 'image/jpeg';
-
-    const prompt = `You are analyzing a meme template image. Look at this image carefully and:
-
-1. Describe what you see in the image in 1-2 sentences (characters, expressions, scene, context)
-2. Generate exactly 4 different caption pairs (top_text and bottom_text) that would be funny, relevant, and perfect for this specific meme template image
-
-The captions should be:
-- Directly relevant to what the image shows (the characters, their expressions, the situation)
-- Humorous and relatable
-- Short (max 10 words per line)
-- Varied in style (mix of relatable, sarcastic, wholesome, and savage)
-
-Return ONLY valid JSON (no markdown, no code fences):
-{
-  "image_description": "<what you see in the image>",
-  "suggestions": [
-    { "top": "<top text>", "bottom": "<bottom text>", "vibe": "<one word vibe like funny/savage/relatable/wholesome>" },
-    { "top": "<top text>", "bottom": "<bottom text>", "vibe": "<vibe>" },
-    { "top": "<top text>", "bottom": "<bottom text>", "vibe": "<vibe>" },
-    { "top": "<top text>", "bottom": "<bottom text>", "vibe": "<vibe>" }
-  ]
-}`;
-
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              {
-                inline_data: {
-                  mime_type: mimeType,
-                  data: base64,
-                }
-              },
-              { text: prompt }
-            ]
-          }]
-        }),
-      }
-    );
-
-    const data = await res.json();
-    if (data.error) throw new Error(data.error.message);
-
-    let raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    raw = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
-    const result = JSON.parse(raw);
-    displayVisionResults(result);
+    displayVisionResults(data.data);
     showToast('🔬 AI Vision scan complete!', 'success');
 
   } catch (err) {
     console.error('Vision scan error:', err);
-    // Fallback to template-name-based suggestions
     const fallback = generateFallbackVisionSuggestions(state.selectedMeme.name);
     displayVisionResults(fallback);
     showToast('⚠️ Using smart fallback captions', 'warn');
@@ -433,18 +379,6 @@ Return ONLY valid JSON (no markdown, no code fences):
     scanSpinner.style.display = 'none';
     btnScan.disabled = false;
   }
-}
-
-function blobToBase64(blob) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64String = reader.result.split(',')[1];
-      resolve(base64String);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
 }
 
 function displayVisionResults(result) {
@@ -478,17 +412,21 @@ function generateFallbackVisionSuggestions(templateName) {
 
   if (name.includes('skeptical') || name.includes('third world')) {
     suggestions = [
-      { top: "So you're telling me", bottom: "Your code worked on the first try?", vibe: "sarcastic" },
-      { top: "You mean to tell me", bottom: "The meeting could've been an email?", vibe: "relatable" },
-      { top: "Wait, you're saying", bottom: "You actually read the terms and conditions?", vibe: "funny" },
-      { top: "So let me get this straight", bottom: "You went to bed before midnight?", vibe: "savage" },
+      { top: "So you're telling me", bottom: "Your code worked on the first try?", vibe: "funny" },
+      { top: "You mean to tell me", bottom: "The meeting could've been an email?", vibe: "savage" },
+      { top: "Wait, you're saying", bottom: "You actually read the docs?", vibe: "relatable" },
+      { top: "So you really thought", bottom: "Free trial wouldn't end?", vibe: "wholesome" },
+      { top: "You're telling me", bottom: "You don't Google the error first?", vibe: "sarcastic" },
+      { top: "Let me get this straight", bottom: "You went to bed before midnight?", vibe: "dark" },
     ];
   } else if (name.includes('yoda') || name.includes('star wars')) {
     suggestions = [
-      { top: "Do or do not", bottom: "There is no try... just Stack Overflow", vibe: "funny" },
+      { top: "Do or do not", bottom: "There is no try... just StackOverflow", vibe: "funny" },
       { top: "Strong with bugs", bottom: "Your code is", vibe: "savage" },
       { top: "Sleep you must", bottom: "But one more episode you will watch", vibe: "relatable" },
       { top: "Judge me by my commits", bottom: "Do you? Hmm?", vibe: "sarcastic" },
+      { top: "Patience you must have", bottom: "WiFi connecting it is", vibe: "wholesome" },
+      { top: "Fear leads to anger", bottom: "Anger leads to git push --force", vibe: "dark" },
     ];
   } else if (name.includes('look at me') || name.includes('pirate')) {
     suggestions = [
@@ -496,27 +434,35 @@ function generateFallbackVisionSuggestions(templateName) {
       { top: "Look at me", bottom: "I'm the bug creator now", vibe: "funny" },
       { top: "Look at me", bottom: "I am the procrastinator now", vibe: "relatable" },
       { top: "Look at me", bottom: "I decide when we eat", vibe: "wholesome" },
+      { top: "Look at me", bottom: "I'm the senior dev now", vibe: "sarcastic" },
+      { top: "Look at me", bottom: "I own this Netflix account now", vibe: "dark" },
     ];
   } else if (name.includes('gustin') || name.includes('grave')) {
     suggestions = [
       { top: "My motivation", bottom: "Me standing over it on Monday", vibe: "relatable" },
       { top: "My sleep schedule", bottom: "Me at 3 AM on my phone", vibe: "savage" },
       { top: "My diet plans", bottom: "Me with a pizza", vibe: "funny" },
-      { top: "My free time", bottom: "Me after getting a job", vibe: "relatable" },
+      { top: "My free time", bottom: "Me after getting a job", vibe: "dark" },
+      { top: "My savings", bottom: "Me after online shopping", vibe: "sarcastic" },
+      { top: "My productivity", bottom: "Me discovering a new show", vibe: "wholesome" },
     ];
   } else if (name.includes('drake')) {
     suggestions = [
       { top: "Working hard", bottom: "Working smart", vibe: "relatable" },
       { top: "Reading the docs", bottom: "Asking ChatGPT", vibe: "funny" },
-      { top: "Going to the gym", bottom: "Saying I'll start Monday", vibe: "relatable" },
-      { top: "8 hours of sleep", bottom: "One more episode", vibe: "savage" },
+      { top: "Going to the gym", bottom: "Saying I'll start Monday", vibe: "savage" },
+      { top: "8 hours of sleep", bottom: "One more episode", vibe: "dark" },
+      { top: "Fixing the bug", bottom: "Commenting it out", vibe: "sarcastic" },
+      { top: "Adulting properly", bottom: "Ordering pizza at midnight", vibe: "wholesome" },
     ];
   } else {
     suggestions = [
       { top: "Nobody:", bottom: "Absolutely nobody:", vibe: "funny" },
       { top: "Me pretending to work", bottom: "While scrolling memes", vibe: "relatable" },
-      { top: "My brain at 3 AM", bottom: "Let's think about everything", vibe: "relatable" },
+      { top: "My brain at 3 AM", bottom: "Let's think about everything", vibe: "dark" },
       { top: "This is fine", bottom: "Everything is fine", vibe: "sarcastic" },
+      { top: "Me: I'll be productive today", bottom: "Also me: opens social media", vibe: "savage" },
+      { top: "When the WiFi works", bottom: "Best feeling in the world", vibe: "wholesome" },
     ];
   }
 
@@ -701,39 +647,17 @@ const AI_NLU = {
 
 // ─── GEMINI API INTEGRATION ──────────────────────────────────
 async function analyzeWithGemini(text) {
-  const apiKey = (typeof GEMINI_CONFIG !== 'undefined') ? GEMINI_CONFIG.apiKey : '';
-  if (!apiKey) return null; // Fall back to client-side
-
-  const prompt = `You are a meme generation AI. Analyze this text and return ONLY valid JSON (no markdown, no code fences):
-"${text}"
-
-Return JSON with these exact keys:
-{
-  "emotion": "<detected emotion with emoji prefix, e.g. 😂 funny>",
-  "category": "<meme category, e.g. student life, coding, daily struggle>",
-  "template_suggestion": "<name of a popular meme template from imgflip like: Drake Hotline Bling, Third World Skeptical Kid, Star Wars Yoda, Look At Me, Grant Gustin over grave, Change My Mind, Two Buttons, Panik Kalm Panik, etc.>",
-  "top_text": "<short meme top text, max 10 words>",
-  "bottom_text": "<short meme bottom text, max 12 words>"
-}
-Keep captions concise, humorous, and relatable. Use well-known meme templates only.`;
-
   try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-      }
-    );
+    const res = await fetch(API_BASE + '/ai/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
     const data = await res.json();
-    if (data.error) throw new Error(data.error.message);
-    let raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    // Strip markdown fences if present
-    raw = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
-    return JSON.parse(raw);
+    if (!data.success) return null;
+    return data.data;
   } catch (err) {
-    console.warn('Gemini API error, using client-side fallback:', err.message);
+    console.warn('Backend AI error, using client-side fallback:', err.message);
     return null;
   }
 }
@@ -828,9 +752,9 @@ async function fetchAiGifs(result) {
   const aiGifSection = $('ai-gif-section');
   const aiGifGrid = $('ai-gif-grid');
   const aiGifQuery = $('ai-gif-query');
-  const apiKey = getGiphyKey();
+  const available = await checkGiphyAvailable();
 
-  if (!apiKey) {
+  if (!available) {
     aiGifSection.style.display = 'none';
     return;
   }
@@ -843,7 +767,7 @@ async function fetchAiGifs(result) {
   aiGifSection.style.display = 'block';
 
   try {
-    const url = `https://api.giphy.com/v1/gifs/search?api_key=${apiKey}&q=${encodeURIComponent(query)}&limit=8&rating=pg-13&lang=en`;
+    const url = `${API_BASE}/gifs/search?q=${encodeURIComponent(query)}&limit=8`;
     const res = await fetch(url);
     const data = await res.json();
 
@@ -852,10 +776,19 @@ async function fetchAiGifs(result) {
       return;
     }
 
-    aiGifGrid.innerHTML = data.data.map(gif => `
-      <div class="ai-gif-item">
+    const blocklist = getGifBlocklist();
+    const filteredGifs = data.data.filter(gif => !blocklist.includes(gif.id));
+
+    if (!filteredGifs.length) {
+      aiGifGrid.innerHTML = '<p style="color:var(--muted);text-align:center;padding:20px">No GIFs found for this mood 😕</p>';
+      return;
+    }
+
+    aiGifGrid.innerHTML = filteredGifs.map(gif => `
+      <div class="ai-gif-item" data-gif-id="${gif.id}">
         <img src="${gif.images.fixed_height_small.url}" alt="${gif.title}" loading="lazy" />
         <div class="gif-badge">GIF</div>
+        <button class="gif-hide-btn" onclick="hideGifCard('${gif.id}', this.parentElement)" title="Hide this GIF">🚫</button>
         <div class="ai-gif-item-overlay">
           <button class="gif-action-btn" onclick="window.open('${gif.url}','_blank')">🔗</button>
           <button class="gif-action-btn" onclick="copyGifUrl('${gif.images.original.url}')">📋</button>
@@ -927,13 +860,48 @@ const btnGifLoadMore = $('btn-gif-load-more');
 
 const gifState = { query: '', offset: 0, limit: 20 };
 
-function getGiphyKey() {
-  return (typeof GIPHY_CONFIG !== 'undefined' && GIPHY_CONFIG.apiKey) ? GIPHY_CONFIG.apiKey : '';
+// ─── GIF BLOCKLIST ────────────────────────────────────────────
+const GIF_BLOCKLIST_KEY = 'memeforge_gif_blocklist';
+
+function getGifBlocklist() {
+  return JSON.parse(localStorage.getItem(GIF_BLOCKLIST_KEY) || '[]');
+}
+
+function blockGif(gifId) {
+  const list = getGifBlocklist();
+  if (!list.includes(gifId)) {
+    list.push(gifId);
+    localStorage.setItem(GIF_BLOCKLIST_KEY, JSON.stringify(list));
+  }
+}
+
+function hideGifCard(gifId, element) {
+  blockGif(gifId);
+  // Animate out
+  element.style.transition = 'all 0.35s ease';
+  element.style.transform = 'scale(0.8)';
+  element.style.opacity = '0';
+  setTimeout(() => {
+    element.remove();
+    showToast('🚫 GIF hidden — it won\'t appear again', 'info');
+  }, 350);
+}
+
+// Giphy key is managed by the backend — this just checks if backend has it
+let _giphyAvailable = null;
+async function checkGiphyAvailable() {
+  if (_giphyAvailable !== null) return _giphyAvailable;
+  try {
+    const res = await fetch(API_BASE + '/health');
+    const data = await res.json();
+    _giphyAvailable = data.apis?.giphy || false;
+    return _giphyAvailable;
+  } catch { return false; }
 }
 
 async function searchGifs(query, offset = 0) {
-  const apiKey = getGiphyKey();
-  if (!apiKey) {
+  const available = await checkGiphyAvailable();
+  if (!available) {
     gifApiNotice.style.display = 'block';
     gifGridEmpty.style.display = 'block';
     return;
@@ -946,7 +914,7 @@ async function searchGifs(query, offset = 0) {
   }
 
   try {
-    const url = `https://api.giphy.com/v1/gifs/search?api_key=${apiKey}&q=${encodeURIComponent(query)}&limit=${gifState.limit}&offset=${offset}&rating=pg-13&lang=en`;
+    const url = `${API_BASE}/gifs/search?q=${encodeURIComponent(query)}&limit=${gifState.limit}&offset=${offset}`;
     const res = await fetch(url);
     const data = await res.json();
 
@@ -964,12 +932,17 @@ async function searchGifs(query, offset = 0) {
     if (offset === 0) gifGrid.innerHTML = '';
     gifGridEmpty.style.display = 'none';
 
-    data.data.forEach(gif => {
+    const blocklist = getGifBlocklist();
+    const filteredGifs = data.data.filter(gif => !blocklist.includes(gif.id));
+
+    filteredGifs.forEach(gif => {
       const item = document.createElement('div');
       item.className = 'gif-item';
+      item.dataset.gifId = gif.id;
       item.innerHTML = `
         <img src="${gif.images.fixed_height.url}" alt="${gif.title}" loading="lazy" />
         <div class="gif-badge">GIF</div>
+        <button class="gif-hide-btn" onclick="hideGifCard('${gif.id}', this.parentElement)" title="Hide this GIF">🚫</button>
         <div class="gif-item-overlay">
           <div class="gif-item-title">${gif.title || 'Untitled'}</div>
           <div class="gif-item-actions">
@@ -1042,8 +1015,9 @@ function bindGifEvents() {
   });
 }
 
-function initGifs() {
-  if (!getGiphyKey()) {
+async function initGifs() {
+  const available = await checkGiphyAvailable();
+  if (!available) {
     gifApiNotice.style.display = 'block';
   }
 }
@@ -1090,15 +1064,11 @@ function bindEvents() {
   bindGifEvents();
 }
 
-// ─── INIT (updated) ──────────────────────────────────────────
+// ─── INIT ────────────────────────────────────────────────────
 async function init() {
-  if (typeof IMGFLIP_CONFIG !== 'undefined') {
-    imgflipUser.value = IMGFLIP_CONFIG.username || '';
-    imgflipPass.value = IMGFLIP_CONFIG.password || '';
-  }
   await fetchMemes();
   renderGallery();
-  initGifs();
+  await initGifs();
   bindEvents();
 }
 

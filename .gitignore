@@ -1,2 +1,8 @@
-# Private credentials — NEVER share this file
+# Private credentials — NEVER share these files
 config.js
+backend/.env
+
+# Python
+backend/__pycache__/
+backend/venv/
+*.pyc

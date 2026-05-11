@@ -656,6 +656,21 @@ input, select, textarea { font-family: inherit; }
   padding: 3px 10px; border-radius: 12px;
   font-size: 10px; font-weight: 800; color: #fff; letter-spacing: 0.5px;
 }
+.gif-hide-btn {
+  position: absolute; top: 8px; left: 8px; z-index: 5;
+  width: 28px; height: 28px; border-radius: 50%;
+  background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #fff; font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; opacity: 0; transition: all 0.25s;
+}
+.gif-item:hover .gif-hide-btn,
+.ai-gif-item:hover .gif-hide-btn { opacity: 1; }
+.gif-hide-btn:hover {
+  background: rgba(239,68,68,0.8); border-color: rgba(239,68,68,0.6);
+  transform: scale(1.15);
+}
 .gif-load-more { text-align: center; margin-top: 24px; }
 .gif-loading {
   display: flex; justify-content: center; align-items: center;

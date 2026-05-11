@@ -6,8 +6,8 @@
 
 ## 📌 Project Overview
 
-**MemeForge AI** is a fully interactive, browser-based **AI Meme Generator** built with
-vanilla HTML, CSS, and JavaScript. It combines three powerful APIs — **Gemini AI**,
+**MemeForge AI** is an AI-powered **Meme Generator** built with a **Python Flask backend**
+and a vanilla **HTML/CSS/JavaScript frontend**. It combines three powerful APIs — **Gemini AI**,
 **Imgflip**, and **Giphy** — to let users describe any situation in plain text and
 instantly generate a perfectly captioned meme along with related GIF suggestions.
 
@@ -34,7 +34,7 @@ creations locally.
 | Gemini AI | Free API key — [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
 | Giphy | Free API key — [developers.giphy.com](https://developers.giphy.com/dashboard/?create=true) |
 
-All credentials are stored in `config.js` (git-ignored). See **Setup** below.
+All credentials are stored in `backend/.env` (git-ignored). See **Setup** below.
 
 ---
 
@@ -57,7 +57,7 @@ All credentials are stored in `config.js` (git-ignored). See **Setup** below.
 | **Live Search** | Instantly filter templates by name |
 | **Dynamic Caption Inputs** | Adapts to each template's box count (up to 4 text boxes) |
 | **Style Controls** | Choose font family (Impact, Arial, Comic Sans) and text color |
-| **🤖 AI Caption Suggestions** | 6 vibe-based caption packs (Relatable, Savage, Wholesome, Programmer, Student, Monday) |
+| **🤖 AI Vision Suggestions** | Gemini Vision scans the template image and generates 6 vibe-based caption pairs |
 | **Fuzzy Template Matching** | AI suggestions auto-match to available Imgflip templates via fuzzy search |
 
 ### 🎬 GIF Memes (Step 3)
@@ -90,41 +90,38 @@ git clone <your-repo-url>
 cd aiEssential
 ```
 
-Create a `config.js` file in the project root with your API credentials:
+Create a `backend/.env` file with your API credentials:
 
-```js
-const IMGFLIP_CONFIG = {
-  username: 'your_imgflip_username',
-  password: 'your_imgflip_password',
-};
+```env
+# Google Gemini API Key (free from https://aistudio.google.com/apikey)
+GEMINI_API_KEY=your_gemini_api_key
 
-const GEMINI_CONFIG = {
-  apiKey: 'your_gemini_api_key',   // from aistudio.google.com/apikey
-};
+# Giphy API Key (free from https://developers.giphy.com/dashboard/?create=true)
+GIPHY_API_KEY=your_giphy_api_key
 
-const GIPHY_CONFIG = {
-  apiKey: 'your_giphy_api_key',    // from developers.giphy.com
-};
+# Imgflip Credentials (free from https://imgflip.com/signup)
+IMGFLIP_USERNAME=your_imgflip_username
+IMGFLIP_PASSWORD=your_imgflip_password
 ```
 
-> ⚠️ `config.js` is git-ignored — your credentials stay local.
+> ⚠️ `backend/.env` is git-ignored — your credentials stay local and are never exposed to the browser.
 
-### 2. Open the App
-
-No build tools needed — just open the HTML file directly:
-
-```
-open index.html
-```
-
-Or use a local development server:
+### 2. Install Python Dependencies
 
 ```bash
-npx serve . -p 3333
-# Then open http://localhost:3333
+cd backend
+pip install -r requirements.txt
 ```
 
-### 3. Start Creating
+### 3. Start the Server
+
+```bash
+python app.py
+```
+
+The server starts at **http://localhost:5000** — open it in your browser.
+
+### 4. Start Creating
 
 - **AI Magic** → Describe a situation → AI generates the meme  
 - **Manual Mode** → Pick a template → Write captions → Forge  
@@ -136,14 +133,15 @@ npx serve . -p 3333
 
 | Technology | Role |
 |---|---|
-| HTML5 | Page structure & semantic markup |
-| CSS3 | Dark theme, glassmorphism, gradients, particle animations |
-| JavaScript (ES6+) | API integration, state management, DOM logic, NLU engine |
-| Google Gemini AI | Natural language analysis & intelligent meme generation |
-| Imgflip API | Meme template fetching & captioned image generation |
-| Giphy API | Animated GIF meme search & discovery |
-| Google Fonts (Outfit, Space Grotesk) | Modern typography |
-| localStorage | Meme gallery persistence |
+| **Python / Flask** | Backend server — proxies all API calls, manages secrets |
+| **HTML5** | Page structure & semantic markup |
+| **CSS3** | Dark theme, glassmorphism, gradients, particle animations |
+| **JavaScript (ES6+)** | Frontend logic, state management, DOM interaction, NLU engine |
+| **Google Gemini AI** | Natural language analysis & intelligent meme generation |
+| **Imgflip API** | Meme template fetching & captioned image generation |
+| **Giphy API** | Animated GIF meme search & discovery |
+| **Google Fonts** | Modern typography (Outfit, Space Grotesk) |
+| **localStorage** | Meme gallery persistence |
 
 ---
 
@@ -151,71 +149,63 @@ npx serve . -p 3333
 
 ```
 aiEssential/
-├── index.html    ← Full page structure (Hero, AI Magic, Generator, GIFs, Gallery)
-├── style.css     ← Dark theme, glassmorphism, animations, responsive grid
-├── app.js        ← All application logic (API calls, AI NLU engine, state, DOM)
-├── config.js     ← API credentials (git-ignored — create your own)
-├── .gitignore    ← Excludes config.js from version control
-└── README.md     ← This file
+├── backend/
+│   ├── app.py              ← Flask server with 6 API endpoints
+│   ├── requirements.txt    ← Python dependencies (flask, flask-cors, etc.)
+│   └── .env                ← API credentials (git-ignored)
+├── frontend/
+│   ├── index.html          ← Full page structure (Hero, AI Magic, Generator, GIFs, Gallery)
+│   ├── style.css           ← Dark theme, glassmorphism, animations, responsive grid
+│   └── app.js              ← Frontend logic (calls backend API, NLU fallback, DOM)
+├── .gitignore              ← Excludes .env and __pycache__ from version control
+└── README.md               ← This file
 ```
+
+### Backend API Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/` | GET | Serves the frontend |
+| `/api/health` | GET | Health check — reports which API keys are configured |
+| `/api/memes` | GET | Proxies Imgflip `get_memes` API |
+| `/api/caption` | POST | Proxies Imgflip `caption_image` (server injects credentials) |
+| `/api/ai/analyze` | POST | Sends text to Gemini AI for meme analysis |
+| `/api/ai/vision` | POST | Sends image to Gemini Vision for caption suggestions |
+| `/api/gifs/search` | GET | Proxies Giphy search API |
 
 ---
 
-## 🧠 Architecture Highlights
+## 🧠 Architecture
 
-### AI Meme Pipeline
+### Frontend ↔ Backend Flow
 
 ```
-User Input (text)
-    │
-    ▼
-┌────────────────────┐     ┌──────────────────────┐
-│  Gemini AI (cloud)  │────▶│  Structured JSON      │
-│  Emotion + Template │     │  emotion, category,   │
-│  + Captions         │     │  template, captions   │
-└────────────────────┘     └──────────┬───────────┘
-    │ (fallback)                       │
-    ▼                                  ▼
-┌────────────────────┐     ┌──────────────────────┐
-│  Client-Side NLU    │     │  Fuzzy Template Match │
-│  Keyword matching   │     │  Against Imgflip list │
-│  10 emotions ×      │     └──────────┬───────────┘
-│  8 categories       │                │
-└────────────────────┘                ▼
-                              ┌──────────────────┐
-                              │  Forge Meme via   │
-                              │  Imgflip API POST │
-                              └──────────────────┘
+Frontend (browser)              Backend (Flask @ :5000)           External APIs
+─────────────────              ────────────────────────           ─────────────
+                                                         
+User types text ──►  fetch('/api/ai/analyze')  ──►  Gemini AI
+                          ◄── JSON result ◄──           
+                                                         
+User clicks Forge ──►  fetch('/api/caption')  ──►  Imgflip API
+                          ◄── meme URL ◄──              
+                                                         
+GIF search ──►  fetch('/api/gifs/search')  ──►  Giphy API
+                     ◄── GIF results ◄──                
 ```
 
-### Client-Side NLU Engine
+> **Key benefit:** All API keys stay on the server. The frontend never sees or transmits any secrets.
 
-The built-in fallback AI engine (`AI_NLU`) runs entirely in the browser:
 
-- **10 Emotion categories**: Funny, Stress, Sarcasm, Relatable, Sad, Angry, Shocked, Happy, Tired, Confused
-- **8 Topic categories**: Student Life, Coding, Work Life, Relationships, Daily Struggle, Internet Culture, Gaming, Food
-- **Dynamic caption patterns**: Context-aware text generation per emotion
-- **Template mapping**: 15+ emotion × category combinations mapped to curated Imgflip templates
-
----
 
 ## 🎓 Learning Outcomes
 
+- **Full-Stack Architecture** — Python Flask backend with a static JavaScript frontend
+- **API Security** — Server-side API key management via environment variables
 - **Multi-API integration** — coordinating Gemini AI, Imgflip, and Giphy in a single app
-- **REST API calls** — `fetch()` with GET, POST, FormData, and URLSearchParams
+- **REST API design** — building proxy endpoints with Flask
 - **AI / NLU concepts** — keyword-based emotion detection, template matching, caption generation
-- **Async/Await** — clean asynchronous JavaScript with error handling and loading states
-- **localStorage** — client-side data persistence for the gallery
-- **Modern CSS** — glassmorphism, gradient text, particle animations, responsive grid layouts
-- **UI/UX Design** — building premium, multi-section, responsive web interfaces
-- **Security** — API key management via `.gitignore` and separate config files
 
 ---
 
-## 📜 License
 
-This project is built for academic purposes as part of the **AI Essential** subject curriculum.
-
----
-
-*Built for AI Essential Subject · Powered by [Gemini AI](https://ai.google.dev/) · [Imgflip API](https://imgflip.com/api) · [Giphy](https://giphy.com)*
+~AI Essential Subject · Powered by [Gemini AI](https://ai.google.dev/) · [Imgflip API](https://imgflip.com/api) · [Giphy](https://giphy.com)

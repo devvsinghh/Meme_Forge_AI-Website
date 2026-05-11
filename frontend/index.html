@@ -282,19 +282,6 @@
               </div>
             </div>
 
-            <!-- Credentials -->
-            <div class="creds-section" id="creds-section">
-              <div class="creds-header">
-                <span>🔑 Imgflip Account</span>
-                <a href="https://imgflip.com/signup" target="_blank" rel="noopener" class="creds-link">Create free account →</a>
-              </div>
-              <div class="creds-row">
-                <input type="text" id="imgflip-username" placeholder="Imgflip username" />
-                <input type="password" id="imgflip-password" placeholder="Imgflip password" />
-              </div>
-              <p class="creds-note">ℹ️ Demo credentials work for testing. Create your own for production use.</p>
-            </div>
-
             <div class="action-row">
               <button class="btn btn-primary btn-forge" id="btn-forge" disabled>
                 <span id="forge-label">⚡ Forge My Meme</span>
@@ -373,9 +360,8 @@
       </div>
 
       <div id="gif-api-notice" class="gif-api-notice" style="display:none">
-        <p>🔑 <strong>Giphy API key needed!</strong> Get a free key from
-          <a href="https://developers.giphy.com/dashboard/?create=true" target="_blank" rel="noopener">developers.giphy.com</a>
-          and paste it in <code>config.js</code></p>
+        <p>🔑 <strong>Giphy API key needed!</strong> Add your key to
+          <code>backend/.env</code> and restart the server.</p>
       </div>
 
       <div class="gif-grid" id="gif-grid">
@@ -462,6 +448,8 @@
         <span class="tech-tag">HTML5</span>
         <span class="tech-tag">CSS3</span>
         <span class="tech-tag">JavaScript</span>
+        <span class="tech-tag">Python</span>
+        <span class="tech-tag">Flask</span>
         <span class="tech-tag">Imgflip API</span>
         <span class="tech-tag">Gemini AI</span>
         <span class="tech-tag">Giphy API</span>
@@ -470,7 +458,7 @@
     </div>
   </footer>
 
-  <script src="config.js"></script>
   <script src="app.js"></script>
+
 </body>
 </html>
